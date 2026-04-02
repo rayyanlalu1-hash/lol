@@ -1,0 +1,5 @@
+{
+  "name": "Theldenny",
+  "description": "A real-time screen sharing and conferencing platform like Discord and Zoom.",
+  "requestFramePermissions": ["camera", "microphone", "display-capture"]
+}

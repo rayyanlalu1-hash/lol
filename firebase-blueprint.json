@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "peerId": { "type": "string", "description": "PeerJS unique ID" },
+        "displayName": { "type": "string", "description": "User's display name" },
+        "email": { "type": "string", "description": "User's email address" },
+        "photoURL": { "type": "string", "description": "User's profile picture URL" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
+      },
+      "required": ["uid", "email"]
+    },
+    "meetings": {
+      "title": "Meeting",
+      "description": "Active or scheduled meeting sessions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Meeting unique ID" },
+        "hostId": { "type": "string", "description": "UID of the meeting host" },
+        "title": { "type": "string", "description": "Meeting title" },
+        "status": { "type": "string", "enum": ["active", "ended"], "description": "Current status of the meeting" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Meeting creation timestamp" }
+      },
+      "required": ["id", "hostId", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profile documents"
+    },
+    "/meetings/{meetingId}": {
+      "schema": "meetings",
+      "description": "Meeting session documents"
+    },
+    "/meetings/{meetingId}/participants/{userId}": {
+      "schema": "users",
+      "description": "Participants in a meeting"
+    }
+  }
+}

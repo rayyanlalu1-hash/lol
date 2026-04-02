@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - displayName: string (optional) - User's display name
+    //   - email: string (required) - User's email address
+    //   - photoURL: string (optional) - User's profile picture URL
+    //   - createdAt: string (optional) - Account creation timestamp
+    //
+    // Collection: meetings
+    // Document ID: {meetingId}
+    // Fields:
+    //   - id: string (required) - Meeting unique ID
+    //   - hostId: string (required) - UID of the meeting host
+    //   - title: string (optional) - Meeting title
+    //   - status: string (required, enum: active, ended) - Current status
+    //   - createdAt: string (optional) - Meeting creation timestamp
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+             request.auth.token.email == "rayyanlalu1@gmail.com" && 
+             request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return data.uid is string && data.uid == request.auth.uid &&
+             data.email is string && isValidEmail(data.email) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 500));
+    }
+
+    function isValidMeeting(data) {
+      return data.hostId is string && data.hostId == request.auth.uid &&
+             data.status in ['active', 'ended'] &&
+             (!('title' in data) || (data.title is string && data.title.size() < 200));
+    }
+
+    function isValidParticipant(data) {
+      return data.uid is string && data.uid == request.auth.uid &&
+             (!('name' in data) || (data.name is string && data.name.size() < 100));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /meetings/{meetingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidMeeting(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.hostId == request.auth.uid) && isValidMeeting(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.hostId == request.auth.uid || isAdmin());
+
+      match /participants/{userId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isOwner(userId) && isValidParticipant(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}
